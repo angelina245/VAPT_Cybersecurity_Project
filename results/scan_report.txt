@@ -1,0 +1,46 @@
+VAPT SCAN REPORT - DummyBank Sample Target
+Generated: 2026-06-27T09:33:53.567384
+Target: http://127.0.0.1:5000
+======================================================================
+
+[CRITICAL] SQL Injection in Login Form
+Description: The login form is vulnerable to SQL Injection. Using payload admin' OR '1'='1 as the username bypassed authentication entirely.
+Evidence:
+POST /login -> 302 redirect to /welcome?user=admin'%20OR%20'1'='1
+----------------------------------------------------------------------
+
+[CRITICAL] Sensitive Data Exposure - Database Backup Accessible
+Description: The raw SQLite database file is directly downloadable from a predictable URL, exposing all user credentials and balances.
+Evidence:
+GET /backup/dummybank.db -> 200 OK, 8192 bytes returned
+----------------------------------------------------------------------
+
+[HIGH] Reflected Cross-Site Scripting (XSS)
+Description: The /welcome endpoint reflects the 'user' parameter into the HTML response without sanitization or output encoding, allowing arbitrary JavaScript execution in a victim's browser.
+Evidence:
+GET /welcome?user=<script>alert('XSS')</script>  -> payload reflected unescaped in response body
+----------------------------------------------------------------------
+
+[HIGH] Broken Access Control / Insecure Direct Object Reference (IDOR)
+Description: Account details (including balances and admin flags) for ANY user can be viewed simply by changing the numeric ID in the URL, with no login or ownership check performed.
+Evidence:
+  account/1 -> <h3>Account #1</h3>Username: admin<br>Balance: $999999.0<br>Admin: 1...
+  account/2 -> <h3>Account #2</h3>Username: john_doe<br>Balance: $4520.75<br>Admin: 0...
+  account/3 -> <h3>Account #3</h3>Username: jane_smith<br>Balance: $1899.1<br>Admin: 0...
+  account/4 -> <h3>Account #4</h3>Username: test<br>Balance: $100.0<br>Admin: 0...
+----------------------------------------------------------------------
+
+[HIGH] Weak / Default Credentials
+Description: Several accounts (including an administrator account) use common, easily guessable passwords with no account lockout or rate limiting in place, making brute-force attacks practical.
+Evidence:
+  admin / admin123  -> login succeeded
+  test / test  -> login succeeded
+  john_doe / password1  -> login succeeded
+----------------------------------------------------------------------
+
+[MEDIUM] Missing HTTP Security Headers
+Description: The application does not set important security headers, increasing exposure to clickjacking, MIME-sniffing, and downgrade attacks.
+Evidence:
+Missing headers: Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security
+----------------------------------------------------------------------
+
